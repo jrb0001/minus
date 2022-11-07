@@ -1,12 +1,16 @@
 use minus::error::MinusError;
 
 fn main() -> Result<(), MinusError> {
-    let output = minus::Pager::new();
+    for _ in 0..2 {
+        let output = minus::Pager::new();
 
-    for i in 0..=100 {
-        output.push_str(&format!("{}\n", i))?;
-    }
+        output.set_exit_strategy(minus::ExitStrategy::PagerQuit)?;
 
-    minus::page_all(output)?;
+        for i in 0..=100 {
+            output.push_str(&format!("{}\n", i))?;
+        }
+
+        minus::page_all(output)?;
+        }
     Ok(())
 }
