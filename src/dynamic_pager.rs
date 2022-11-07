@@ -15,6 +15,5 @@ use crate::Pager;
 /// The function will return with an error if it encounters a error during paging.
 #[cfg_attr(docsrs, doc(cfg(feature = "dynamic_output")))]
 pub fn dynamic_paging(pager: Pager) -> Result<(), MinusError> {
-    assert!(init::RUNMODE.set(init::RunMode::Dynamic).is_ok(), "Failed to set the RUNMODE. This is caused probably bcause another instance of minus is already running");
-    init::init_core(pager)
+    init::init_core(pager, init::RunMode::Dynamic)
 }

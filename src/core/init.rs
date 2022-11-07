@@ -38,8 +38,6 @@ pub enum RunMode {
     Dynamic,
 }
 
-pub static RUNMODE: OnceCell<RunMode> = OnceCell::new();
-
 /// The main entry point of minus
 ///
 /// This is called by both [`dynamic_paging`](crate::dynamic_paging) and
@@ -73,7 +71,7 @@ pub static RUNMODE: OnceCell<RunMode> = OnceCell::new();
 ///
 /// [`event reader`]: event_reader
 #[allow(clippy::module_name_repetitions)]
-pub fn init_core(mut pager: Pager) -> std::result::Result<(), MinusError> {
+pub fn init_core(mut pager: Pager, run_mode: RunMode) -> std::result::Result<(), MinusError> {
     #[allow(unused_mut)]
     let mut out = stdout();
     // Is the event reader running
@@ -89,7 +87,7 @@ pub fn init_core(mut pager: Pager) -> std::result::Result<(), MinusError> {
 
     // Static mode checks
     #[cfg(feature = "static_output")]
-    if RUNMODE.get() == Some(&RunMode::Static) {
+    if run_mode == RunMode::Static {
         // If stdout is not a tty, write everyhting and quit
         if !out.is_tty() {
             write_lines(&mut out, &mut ps)?;
@@ -155,6 +153,7 @@ pub fn init_core(mut pager: Pager) -> std::result::Result<(), MinusError> {
                     #[cfg(feature = "search")]
                     &input_thread_running,
                     &is_exitted,
+                    run_mode,
                 )
             });
             let (r1, r2) = (t1.join().unwrap(), t2.join().unwrap());
@@ -186,6 +185,7 @@ fn start_reactor(
     out: &Stdout,
     #[cfg(feature = "search")] input_thread_running: &Arc<Mutex<()>>,
     is_exitted: &Arc<AtomicBool>,
+    run_mode: RunMode,
 ) -> Result<(), MinusError> {
     let mut out_lock = out.lock();
 
@@ -194,9 +194,9 @@ fn start_reactor(
     }
 
     #[allow(clippy::match_same_arms)]
-    match RUNMODE.get() {
+    match run_mode {
         #[cfg(feature = "dynamic_output")]
-        Some(&RunMode::Dynamic) => loop {
+        RunMode::Dynamic => loop {
             use std::{convert::TryInto, io::Write};
             if is_exitted.load(Ordering::SeqCst) {
                 break;
@@ -289,7 +289,7 @@ fn start_reactor(
             }
         },
         #[cfg(feature = "static_output")]
-        Some(&RunMode::Static) => loop {
+        RunMode::Static => loop {
             if is_exitted.load(Ordering::SeqCst) {
                 let p = ps.lock().unwrap();
                 term::cleanup(&mut out_lock, &p.exit_strategy, true)?;
@@ -310,7 +310,6 @@ fn start_reactor(
                 draw(&mut out_lock, &mut p)?;
             }
         },
-        None => panic!("Static variable RUNMODE not set"),
     }
     Ok(())
 }
